@@ -6,6 +6,79 @@
     <title>Machine Complaint Management System</title>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script>
+      (function() {
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyDwBBooQ-6u1X02UMydM51PnlbcySsx3ic",
+          authDomain: "machine-complaint-app.firebaseapp.com",
+          databaseURL: "https://machine-complaint-app-default-rtdb.firebaseio.com",
+          projectId: "machine-complaint-app",
+          storageBucket: "machine-complaint-app.firebasestorage.app",
+          messagingSenderId: "1023747670338",
+          appId: "1:1023747670338:web:9bdd5bc4c4efd67690c8db"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const rtdb = firebase.database();
+
+        window.cmsFirebase = {
+          getCachedData: function() {
+            try {
+              const cached = localStorage.getItem("cms-data");
+              return cached ? JSON.parse(cached) : null;
+            } catch(e) {
+              return null;
+            }
+          },
+          load: function(callback, defaultData) {
+            const cached = this.getCachedData();
+            if (cached) {
+              callback(cached);
+            } else if (defaultData) {
+              callback(defaultData);
+            }
+
+            rtdb.ref("cms-data").once("value").then((snapshot) => {
+              const data = snapshot.val();
+              if (data) {
+                localStorage.setItem("cms-data", JSON.stringify(data));
+                callback(data);
+              } else {
+                const dataToSave = cached || defaultData;
+                if (dataToSave) {
+                  rtdb.ref("cms-data").set(dataToSave);
+                }
+              }
+            }).catch((error) => {
+              console.error("Error loading from Realtime Database:", error);
+            });
+          },
+          save: function(data) {
+            localStorage.setItem("cms-data", JSON.stringify(data));
+            rtdb.ref("cms-data").set(data).catch((error) => {
+              console.error("Error saving to Realtime Database:", error);
+            });
+          }
+        };
+
+        // Intercept setItem to sync passwords / backup restore
+        const originalSetItem = localStorage.setItem;
+        localStorage.setItem = function(key, value) {
+          originalSetItem.apply(this, arguments);
+          if (key === "cms-data") {
+            try {
+              const data = JSON.parse(value);
+              rtdb.ref("cms-data").set(data).catch(err => {
+                console.error("Error saving to RTD on setItem:", err);
+              });
+            } catch(e) {}
+          }
+        };
+      })();
+    </script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
       (function() {
