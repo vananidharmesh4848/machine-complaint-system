@@ -24,6 +24,8 @@
         firebase.initializeApp(firebaseConfig);
         const rtdb = firebase.database();
 
+        let isInternalSetting = false;
+
         window.cmsFirebase = {
           getCachedData: function() {
             try {
@@ -41,23 +43,38 @@
               callback(defaultData);
             }
 
-            rtdb.ref("cms-data").once("value").then((snapshot) => {
+            rtdb.ref("cms-data").on("value", (snapshot) => {
               const data = snapshot.val();
               if (data) {
-                localStorage.setItem("cms-data", JSON.stringify(data));
-                callback(data);
+                const currentLocal = localStorage.getItem("cms-data");
+                if (currentLocal !== JSON.stringify(data)) {
+                  isInternalSetting = true;
+                  localStorage.setItem("cms-data", JSON.stringify(data));
+                  isInternalSetting = false;
+                  callback(data);
+                }
               } else {
                 const dataToSave = cached || defaultData;
                 if (dataToSave) {
-                  rtdb.ref("cms-data").set(dataToSave);
+                  rtdb.ref("cms-data").set(dataToSave).catch((error) => {
+                    console.error("Error initializing Realtime Database:", error);
+                  });
                 }
               }
-            }).catch((error) => {
+            }, (error) => {
               console.error("Error loading from Realtime Database:", error);
             });
           },
           save: function(data) {
-            localStorage.setItem("cms-data", JSON.stringify(data));
+            const currentLocal = localStorage.getItem("cms-data");
+            const dataStr = JSON.stringify(data);
+            if (currentLocal === dataStr) {
+              // Remote update or already saved, no need to write again
+              return;
+            }
+            isInternalSetting = true;
+            localStorage.setItem("cms-data", dataStr);
+            isInternalSetting = false;
             rtdb.ref("cms-data").set(data).catch((error) => {
               console.error("Error saving to Realtime Database:", error);
             });
@@ -68,83 +85,11 @@
         const originalSetItem = localStorage.setItem;
         localStorage.setItem = function(key, value) {
           originalSetItem.apply(this, arguments);
-          if (key === "cms-data") {
+          if (key === "cms-data" && !isInternalSetting) {
             try {
               const data = JSON.parse(value);
               rtdb.ref("cms-data").set(data).catch(err => {
                 console.error("Error saving to RTD on setItem:", err);
-              });
-            } catch(e) {}
-          }
-        };
-      })();
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script>
-      (function() {
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-          apiKey: "AIzaSyDwBBooQ-6u1X02UMydM51PnlbcySsx3ic",
-          authDomain: "machine-complaint-app.firebaseapp.com",
-          projectId: "machine-complaint-app",
-          storageBucket: "machine-complaint-app.firebasestorage.app",
-          messagingSenderId: "1023747670338",
-          appId: "1:1023747670338:web:9bdd5bc4c4efd67690c8db"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        window.cmsFirebase = {
-          getCachedData: function() {
-            try {
-              const cached = localStorage.getItem("cms-data");
-              return cached ? JSON.parse(cached) : null;
-            } catch(e) {
-              return null;
-            }
-          },
-          load: function(callback, defaultData) {
-            const cached = this.getCachedData();
-            if (cached) {
-              callback(cached);
-            } else if (defaultData) {
-              callback(defaultData);
-            }
-
-            db.collection("appState").doc("cms-data").get().then((doc) => {
-              if (doc.exists) {
-                const data = doc.data();
-                localStorage.setItem("cms-data", JSON.stringify(data));
-                callback(data);
-              } else {
-                const dataToSave = cached || defaultData;
-                if (dataToSave) {
-                  db.collection("appState").doc("cms-data").set(dataToSave);
-                }
-              }
-            }).catch((error) => {
-              console.error("Error loading from Firestore:", error);
-            });
-          },
-          save: function(data) {
-            localStorage.setItem("cms-data", JSON.stringify(data));
-            db.collection("appState").doc("cms-data").set(data).catch((error) => {
-              console.error("Error saving to Firestore:", error);
-            });
-          }
-        };
-
-        // Intercept setItem to sync passwords / backup restore
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
-          originalSetItem.apply(this, arguments);
-          if (key === "cms-data") {
-            try {
-              const data = JSON.parse(value);
-              db.collection("appState").doc("cms-data").set(data).catch(err => {
-                console.error("Error saving to Firestore on setItem:", err);
               });
             } catch(e) {}
           }
