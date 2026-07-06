@@ -2349,7 +2349,15 @@ body.cms-force-desktop header[class*="sticky"] {
     return cu && cu.loginType === "department";
   }
 
-  try { localStorage.setItem("cms-data-wiped", "v2"); } catch(e) {}
+  try {
+    ["cms-data","cms-current-user","cms-last-role","cms-last-user","cms-device-mode","cms-notifications","cms-firebase-config","cms-edit-pwd","cms-delete-pwd","cms-sidebar-state"].forEach(function(k) {
+      localStorage.removeItem(k);
+    });
+    localStorage.setItem("cms-data-wiped", "v2");
+    if (window.cmsFirebase && window.cmsFirebase.load) {
+      window.cmsFirebase.load = function(cb, dd) { cb(dd); };
+    }
+  } catch(e) {}
 
   /* ===== Intercept React global assignments with Object.defineProperty ===== */
 
@@ -2501,21 +2509,26 @@ body.cms-force-desktop header[class*="sticky"] {
 
   /* ===== Mobile sidebar fix: ensure top bar visible on narrow screens ===== */
   function fixMobileSidebar() {
-    if (window.innerWidth >= 1024) return;
-    var sb = document.querySelector('aside[class*="w-64"][class*="bg-white"]');
-    if (sb) {
-      sb.style.transform = "none";
-      sb.style.display = "flex";
-      sb.style.position = "fixed";
-      sb.style.top = "0";
-      sb.style.left = "0";
-      sb.style.right = "0";
-      sb.style.width = "100%";
-      sb.style.height = "60px";
-      sb.style.zIndex = "50";
-    }
+    if (window.innerWidth >= 1024 && !document.body.classList.contains('cms-force-mobile')) return;
+    var sb = document.querySelector('aside');
+    if (!sb) return;
+    sb.style.transform = "none";
+    sb.style.display = "flex";
+    sb.style.position = "fixed";
+    sb.style.top = "0";
+    sb.style.left = "0";
+    sb.style.right = "0";
+    sb.style.width = "100%";
+    sb.style.height = "60px";
+    sb.style.zIndex = "50";
+    sb.style.flexDirection = "row";
+    sb.style.alignItems = "center";
+    sb.style.overflow = "hidden";
+    sb.style.background = "linear-gradient(135deg, #1e3a5f, #2d5a87)";
+    sb.style.transition = "none";
+    sb.style.boxShadow = "0 2px 12px rgba(0,0,0,0.15)";
   }
-  setInterval(fixMobileSidebar, 1500);
+  setInterval(fixMobileSidebar, 800);
 })();
   </script>
 </body>
