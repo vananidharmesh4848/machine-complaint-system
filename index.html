@@ -2349,13 +2349,22 @@ body.cms-force-desktop header[class*="sticky"] {
     return cu && cu.loginType === "department";
   }
 
+  if (localStorage.getItem("cms-data-wiped") !== "v2") {
+    try {
+      ["cms-data","cms-current-user","cms-last-role","cms-last-user","cms-device-mode","cms-notifications","cms-firebase-config","cms-edit-pwd","cms-delete-pwd","cms-sidebar-state"].forEach(function(k) {
+        localStorage.removeItem(k);
+      });
+      localStorage.setItem("cms-data-wiped", "v2");
+    } catch(e) {}
+  }
+  if (window.cmsFirebase && window.cmsFirebase.load) {
+    window.cmsFirebase.load = function(cb, dd) { cb(dd); };
+  }
   try {
-    ["cms-data","cms-current-user","cms-last-role","cms-last-user","cms-device-mode","cms-notifications","cms-firebase-config","cms-edit-pwd","cms-delete-pwd","cms-sidebar-state"].forEach(function(k) {
-      localStorage.removeItem(k);
-    });
-    localStorage.setItem("cms-data-wiped", "v2");
-    if (window.cmsFirebase && window.cmsFirebase.load) {
-      window.cmsFirebase.load = function(cb, dd) { cb(dd); };
+    var raw = localStorage.getItem("cms-data");
+    if (!raw) {
+      var empty = {departments:[],machines:[],problems:[],users:[{id:"admin1",name:"Admin",role:"admin",password:"admin123"}],complaints:[],spareParts:[],spareRepairs:[],tools:[],toolUsages:[]};
+      localStorage.setItem("cms-data", JSON.stringify(empty));
     }
   } catch(e) {}
 
