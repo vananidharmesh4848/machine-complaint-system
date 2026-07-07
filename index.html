@@ -2706,6 +2706,75 @@ body.cms-force-desktop header[class*="sticky"] {
     setInterval(injectBar,400);
   })();
 })();
-  </script>
+<!--
+  F12 => PASSWORD GATE SCRIPT
+  Aa script tamara HTML file na <head> ma, sauthi upar paste karo.
+  Niche "YOUR_PASSWORD_HERE" ni jagya e tamaru sachu password nakho.
+-->
+<script>
+(function() {
+  'use strict';
+
+  const CORRECT_PASSWORD = "YOUR_PASSWORD_HERE"; // <-- Aahi tamaru password set karo
+  let unlocked = false; // Ek vaar sachu password aave etle session mate unlock rahe
+
+  function askPassword() {
+    if (unlocked) return; // Pehla thi j unlock hoy to fari na puchvu
+
+    const entered = prompt("Developer Tools access mate Password nakho:");
+
+    if (entered === CORRECT_PASSWORD) {
+      unlocked = true;
+      alert("Access Granted. Devtools have kholi shako cho.");
+    } else {
+      // Khoto password - page blank/block kari devo
+      document.documentElement.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:20px;color:#333;text-align:center;padding:20px;">' +
+        'Access Denied<br><small style="font-size:14px;color:#777;">Khoto password. Page reload karo.</small></div>';
+    }
+  }
+
+  // ===== F12 press detect =====
+  document.addEventListener('keydown', function(e) {
+    if (e.keyCode === 123) { // F12
+      e.preventDefault();
+      askPassword();
+    }
+    // Ctrl+Shift+I / J / C
+    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) {
+      e.preventDefault();
+      askPassword();
+    }
+    // Ctrl+U (view-source)
+    if (e.ctrlKey && e.keyCode === 85) {
+      e.preventDefault();
+      askPassword();
+    }
+  });
+
+  // ===== Right-click par pan password mangvu =====
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    askPassword();
+  });
+
+  // ===== DevTools already khulu hoy to (window resize detect) pan password mangvu =====
+  let devtoolsWasOpen = false;
+  setInterval(function() {
+    const widthDiff = window.outerWidth - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+    const isOpen = widthDiff > 160 || heightDiff > 160;
+
+    if (isOpen && !devtoolsWasOpen && !unlocked) {
+      devtoolsWasOpen = true;
+      askPassword();
+    }
+    if (!isOpen) {
+      devtoolsWasOpen = false;
+    }
+  }, 1000);
+
+})();
+</script>
 </body>
 </html>
