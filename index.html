@@ -1237,6 +1237,13 @@ body.cms-force-desktop header[class*="sticky"] {
       }
     }
   }
+  /* Ensure cms-data exists BEFORE React loads, so React gets the admin user */
+  try {
+    if (!localStorage.getItem('cms-data')) {
+      var initialData = {departments:[],machines:[],problems:[],complaints:[],spareParts:[],spareRepairs:[],tools:[],toolUsages:[],users:[{id:"admin1",name:"Admin",username:"admin",role:"admin",password:"admin123"}]};
+      localStorage.setItem('cms-data', JSON.stringify(initialData));
+    }
+  } catch(e) {}
 })();
     </script>
     <script>
