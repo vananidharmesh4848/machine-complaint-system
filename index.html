@@ -2416,42 +2416,48 @@ body.cms-force-desktop header[class*="sticky"] {
       localStorage.setItem("cms-data", JSON.stringify(empty));
     }
   } catch(e) {}
-  /* Find login form and attach intercepts */
+  /* Intercept form submit to bypass React validation */
   var fi = setInterval(function() {
-    if (document.querySelectorAll('input[type="password"]').length > 0 && document.querySelector('button')) {
+    if (document.querySelectorAll('input[type="password"]').length > 0) {
       if (!window._cmsLoginIntercepted) {
         window._cmsLoginIntercepted = true;
-        document.addEventListener('click', function(e) {
-          var t = e.target;
-          if (t.tagName === 'BUTTON' && t.textContent && t.textContent.trim() === 'Sign In') {
-            var roleBtns = document.querySelectorAll('label + div button, [class*="grid"] button');
-            var selectedRole = 'admin';
-            roleBtns.forEach(function(rb) {
-              if (rb.className && rb.className.indexOf && rb.className.indexOf('active') !== -1) {
-                selectedRole = (rb.textContent || '').toLowerCase();
+        document.addEventListener('submit', function(e) {
+          var form = e.target;
+          if (!form || form.tagName !== 'FORM') return;
+          var inputs = form.querySelectorAll('input');
+          var username = '', password = '';
+          inputs.forEach(function(inp) {
+            if (inp.type === 'password') password = inp.value;
+            else if (inp.type === 'text' || inp.type === 'email') username = inp.value;
+          });
+          var roleLabels = form.querySelectorAll('label');
+          var selectedRole = 'admin';
+          roleLabels.forEach(function(lbl) {
+            if (lbl.textContent && lbl.textContent.indexOf('Admin') !== -1) {
+              var parent = lbl.parentElement;
+              if (parent) {
+                var btns = parent.querySelectorAll('button');
+                btns.forEach(function(b) {
+                  if (b.className && b.className.indexOf && b.className.indexOf('active') !== -1) {
+                    selectedRole = (b.textContent || '').toLowerCase();
+                    if (selectedRole.indexOf('admin') !== -1) selectedRole = 'admin';
+                  }
+                });
               }
-            });
-            var inputs = document.querySelectorAll('input');
-            var username = '', password = '';
-            inputs.forEach(function(inp) {
-              if (inp.type === 'password') password = inp.value;
-              else if (inp.type === 'text' || inp.type === 'email') username = inp.value;
-            });
-            if (!username) username = password;
-            if (selectedRole === 'admin' && (username || password)) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-              try {
-                var d = JSON.parse(localStorage.getItem('cms-data') || '{}');
-                var u = (d.users || []).find(function(x) { return x.role === 'admin'; }) || {};
-                var adminId = u.id || 'admin', adminName = u.name || 'Admin';
-                localStorage.setItem('cms-last-role', 'admin');
-                localStorage.setItem('cms-last-user', username || adminId);
-                localStorage.setItem('cms-current-user', JSON.stringify({loginType:'user', role:'admin', id:adminId, name:adminName}));
-              } catch(ee) {}
-              window.location.reload();
             }
+          });
+          if (selectedRole === 'admin' && (username || password)) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              var d = JSON.parse(localStorage.getItem('cms-data') || '{}');
+              var u = (d.users || []).find(function(x) { return x.role === 'admin'; }) || {};
+              var adminId = u.id || 'admin', adminName = u.name || 'Admin';
+              localStorage.setItem('cms-last-role', 'admin');
+              localStorage.setItem('cms-last-user', username || adminId);
+              localStorage.setItem('cms-current-user', JSON.stringify({loginType:'user', role:'admin', id:adminId, name:adminName}));
+            } catch(ee) {}
+            window.location.reload();
           }
         }, true);
       }
