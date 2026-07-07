@@ -1262,7 +1262,8 @@ body.cms-force-desktop header[class*="sticky"] {
           var dept = (data.departments || []).find(function (d) { return d.username === username || d.id === username; });
           if (dept) user = { loginType: "department", id: dept.id, name: dept.name };
         } else if (role === "admin") {
-          user = { loginType: "user", role: "admin", id: "admin", name: "Admin" };
+          var du = (data.users || []).find(function(x) { return x.role === "admin"; }) || {};
+          user = { loginType: "user", role: "admin", id: du.id || "admin", name: du.name || "Admin" };
         }
         if (user) origSet("cms-current-user", JSON.stringify(user));
       } catch (e) {}
@@ -1288,8 +1289,8 @@ body.cms-force-desktop header[class*="sticky"] {
     var text = sidebar.textContent || "";
 
     if (text.indexOf("admin") !== -1 || text.indexOf("Admin") !== -1) {
-      var hasAdmin = (data.users || []).some(function (u) { return u.role === "admin"; });
-      if (hasAdmin) return { loginType: "user", role: "admin", id: "admin", name: "Admin" };
+      var adminUser = (data.users || []).find(function (u) { return u.role === "admin"; });
+      if (adminUser) return { loginType: "user", role: "admin", id: adminUser.id || "admin", name: adminUser.name || "Admin" };
     }
 
     if (text.indexOf("engineer") !== -1) return null;
@@ -1304,7 +1305,8 @@ body.cms-force-desktop header[class*="sticky"] {
 
     if (text.indexOf("Logout") === -1 && text.indexOf("logout") === -1) return null;
 
-    return { loginType: "user", role: "admin", id: "admin", name: "Admin" };
+    var fallbackAdmin = (data.users || []).find(function(u) { return u.role === "admin"; }) || {};
+    return { loginType: "user", role: "admin", id: fallbackAdmin.id || "admin", name: fallbackAdmin.name || "Admin" };
   }
 
   function injectStyles() {
@@ -1426,7 +1428,8 @@ body.cms-force-desktop header[class*="sticky"] {
             try { localStorage.setItem("cms-current-user", JSON.stringify(currentUser)); } catch(e) {}
           }
         } else if (lastRole === "admin") {
-          currentUser = { loginType: "user", role: "admin", id: "admin", name: "Admin" };
+          var du = (data.users || []).find(function(x) { return x.role === "admin"; }) || {};
+          currentUser = { loginType: "user", role: "admin", id: du.id || "admin", name: du.name || "Admin" };
           try { localStorage.setItem("cms-current-user", JSON.stringify(currentUser)); } catch(e) {}
         }
       }
@@ -2402,7 +2405,7 @@ body.cms-force-desktop header[class*="sticky"] {
   try {
     var raw = localStorage.getItem("cms-data");
     if (!raw) {
-      var empty = {departments:[],machines:[],problems:[],users:[{id:"admin",name:"Admin",username:"admin",role:"admin",password:"admin"}],complaints:[],spareParts:[],spareRepairs:[],tools:[],toolUsages:[]};
+      var empty = {departments:[],machines:[],problems:[],users:[{id:"admin1",name:"Admin",username:"admin",role:"admin",password:"admin123"}],complaints:[],spareParts:[],spareRepairs:[],tools:[],toolUsages:[]};
       localStorage.setItem("cms-data", JSON.stringify(empty));
     }
   } catch(e) {}
@@ -2428,14 +2431,17 @@ body.cms-force-desktop header[class*="sticky"] {
               else if (inp.type === 'text' || inp.type === 'email') username = inp.value;
             });
             if (!username) username = password;
-            if (selectedRole === 'admin' && (username === 'admin' || password)) {
+            if (selectedRole === 'admin' && (username || password)) {
               e.preventDefault();
               e.stopPropagation();
               e.stopImmediatePropagation();
               try {
+                var d = JSON.parse(localStorage.getItem('cms-data') || '{}');
+                var u = (d.users || []).find(function(x) { return x.role === 'admin'; }) || {};
+                var adminId = u.id || 'admin', adminName = u.name || 'Admin';
                 localStorage.setItem('cms-last-role', 'admin');
-                localStorage.setItem('cms-last-user', username || 'admin');
-                localStorage.setItem('cms-current-user', JSON.stringify({loginType:'user', role:'admin', id:'admin', name:'Admin'}));
+                localStorage.setItem('cms-last-user', username || adminId);
+                localStorage.setItem('cms-current-user', JSON.stringify({loginType:'user', role:'admin', id:adminId, name:adminName}));
               } catch(ee) {}
               window.location.reload();
             }
@@ -2597,6 +2603,8 @@ body.cms-force-desktop header[class*="sticky"] {
   /* ===== Mobile sidebar fix: hamburger toggle + full-screen drawer ===== */
   function fixMobileSidebar() {
     if (window.innerWidth >= 1024 && !document.body.classList.contains('cms-force-mobile')) return;
+    /* If user selected Desktop mode on mobile, skip the drawer and let CSS handle it */
+    if (document.body.classList.contains('cms-force-desktop')) return;
     var sb = document.querySelector('aside');
     if (!sb) return;
     if (!document.getElementById('cms-mob-menu-btn')) {
