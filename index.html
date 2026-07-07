@@ -2613,54 +2613,88 @@ body.cms-force-desktop header[class*="sticky"] {
   settingsPageObserver.observe(document.body, { childList: true, subtree: true });
   injectPwdSettings();
 
-  /* ===== Mobile sidebar fix: hamburger toggle + full-screen drawer ===== */
+  /* ===== Mobile sidebar fix: force top horizontal bar ===== */
   function fixMobileSidebar() {
     if (window.innerWidth >= 1024 && !document.body.classList.contains('cms-force-mobile')) return;
-    /* If user selected Desktop mode on mobile, skip the drawer and let CSS handle it */
     if (document.body.classList.contains('cms-force-desktop')) return;
     var sb = document.querySelector('aside');
     if (!sb) return;
-    if (!document.getElementById('cms-mob-menu-btn')) {
-      var btn = document.createElement('button');
-      btn.id = 'cms-mob-menu-btn';
-      btn.innerHTML = '☰';
-      btn.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:10001;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;box-shadow:0 4px 20px rgba(102,126,234,.5);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-      btn.onclick = function() {
-        sb.classList.toggle('cms-mob-open');
-      };
-      document.body.appendChild(btn);
+    sb.style.setProperty('position', 'fixed', 'important');
+    sb.style.setProperty('top', '0', 'important');
+    sb.style.setProperty('left', '0', 'important');
+    sb.style.setProperty('right', '0', 'important');
+    sb.style.setProperty('bottom', 'auto', 'important');
+    sb.style.setProperty('width', '100%', 'important');
+    sb.style.setProperty('height', '60px', 'important');
+    sb.style.setProperty('flex-direction', 'row', 'important');
+    sb.style.setProperty('align-items', 'center', 'important');
+    sb.style.setProperty('padding', '0 8px', 'important');
+    sb.style.setProperty('transform', 'none', 'important');
+    sb.style.setProperty('overflow', 'hidden', 'important');
+    sb.style.setProperty('background', 'linear-gradient(135deg, #1e3a5f, #2d5a87)', 'important');
+    sb.style.setProperty('z-index', '50', 'important');
+    sb.style.setProperty('box-shadow', '0 2px 12px rgba(0,0,0,0.15)', 'important');
+
+    /* Hide logo/title at top of sidebar */
+    var firstChild = sb.querySelector(':scope > div:first-child');
+    if (firstChild) firstChild.style.setProperty('display', 'none', 'important');
+
+    /* Navigation: horizontal scrollable row */
+    var nav = sb.querySelector('nav');
+    if (nav) {
+      nav.style.setProperty('display', 'flex', 'important');
+      nav.style.setProperty('flex-direction', 'row', 'important');
+      nav.style.setProperty('align-items', 'center', 'important');
+      nav.style.setProperty('gap', '4px', 'important');
+      nav.style.setProperty('padding', '0 6px', 'important');
+      nav.style.setProperty('margin', '0', 'important');
+      nav.style.setProperty('overflow-x', 'auto', 'important');
+      nav.style.setProperty('overflow-y', 'hidden', 'important');
+      nav.style.setProperty('flex', '1 1 auto', 'important');
+      nav.style.setProperty('min-width', '0', 'important');
+      nav.style.setProperty('height', '100%', 'important');
+      /* Style nav buttons */
+      nav.querySelectorAll(':scope > button').forEach(function(btn) {
+        btn.style.setProperty('width', 'auto', 'important');
+        btn.style.setProperty('flex', '0 0 auto', 'important');
+        btn.style.setProperty('padding', '6px 10px', 'important');
+        btn.style.setProperty('white-space', 'nowrap', 'important');
+        btn.style.setProperty('color', 'rgba(255,255,255,0.85)', 'important');
+        btn.style.setProperty('background', 'rgba(255,255,255,0.08)', 'important');
+        btn.style.setProperty('border-radius', '8px', 'important');
+      });
     }
-    sb.style.position = 'fixed';
-    sb.style.top = '0';
-    sb.style.left = '-100%';
-    sb.style.width = '280px';
-    sb.style.height = '100vh';
-    sb.style.zIndex = '10000';
-    sb.style.transition = 'left 0.3s ease';
-    sb.style.background = '#fff';
-    sb.style.display = 'flex';
-    sb.style.flexDirection = 'column';
-    sb.style.boxShadow = '2px 0 20px rgba(0,0,0,0.15)';
-    sb.style.overflowY = 'auto';
-    if (sb.classList.contains('cms-mob-open')) {
-      sb.style.left = '0';
+
+    /* Logout button: compact */
+    var logout = sb.querySelector('div.absolute.bottom-0, [class*="bottom-0"]');
+    if (logout) {
+      logout.style.setProperty('position', 'static', 'important');
+      logout.style.setProperty('width', 'auto', 'important');
+      logout.style.setProperty('flex', '0 0 auto', 'important');
+      logout.style.setProperty('border', 'none', 'important');
+      logout.style.setProperty('padding', '0 10px 0 0', 'important');
+      logout.style.setProperty('margin', '0', 'important');
+      logout.style.setProperty('background', 'transparent', 'important');
+      logout.style.setProperty('display', 'flex', 'important');
+      logout.style.setProperty('align-items', 'center', 'important');
+      var avatar = logout.querySelector(':scope > div:first-child');
+      if (avatar) avatar.style.setProperty('display', 'none', 'important');
+      var btn = logout.querySelector('button');
+      if (btn) {
+        btn.style.setProperty('width', 'auto', 'important');
+        btn.style.setProperty('padding', '8px', 'important');
+        btn.style.setProperty('font-size', '0', 'important');
+        btn.style.setProperty('border-radius', '10px', 'important');
+      }
     }
-    /* Overlay when sidebar is open */
-    var ov = document.getElementById('cms-mob-overlay');
-    if (!ov) {
-      ov = document.createElement('div');
-      ov.id = 'cms-mob-overlay';
-      ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.4);display:none;';
-      ov.onclick = function() {
-        sb.classList.remove('cms-mob-open');
-        ov.style.display = 'none';
-      };
-      document.body.appendChild(ov);
-    }
-    if (sb.classList.contains('cms-mob-open')) {
-      ov.style.display = 'block';
-    } else {
-      ov.style.display = 'none';
+
+    /* Main content: below the top bar */
+    var main = document.querySelector('main');
+    if (main) {
+      main.style.setProperty('margin-left', '0', 'important');
+      main.style.setProperty('width', '100%', 'important');
+      main.style.setProperty('height', 'calc(100vh - 60px)', 'important');
+      main.style.setProperty('max-height', 'calc(100vh - 60px)', 'important');
     }
   }
   setInterval(fixMobileSidebar, 500);
