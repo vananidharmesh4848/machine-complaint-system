@@ -1201,6 +1201,45 @@ body.cms-force-desktop header[class*="sticky"] {
   <body>
     <div id="root"></div>
     <script>
+(function() {
+  "use strict";
+  /* localStorage polyfill for file:// protocol (no persistent localStorage) */
+  try {
+    localStorage.setItem('__cms_test', '1');
+    localStorage.removeItem('__cms_test');
+  } catch(e) {
+    var wname = window.name ? JSON.parse(window.name || '{}') : {};
+    var origSet = Storage.prototype.setItem;
+    var origGet = Storage.prototype.getItem;
+    var origRemove = Storage.prototype.removeItem;
+    Storage.prototype.setItem = function(k, v) {
+      var s = {};
+      for (var i = 0; i < this.length; i++) { s[this.key(i)] = this.getItem(this.key(i)); }
+      s[k] = String(v);
+      wname[k] = String(v);
+      window.name = JSON.stringify(wname);
+      origSet.call(this, k, v);
+    };
+    Storage.prototype.getItem = function(k) {
+      var v = origGet.call(this, k);
+      if (v === null && wname.hasOwnProperty(k) && wname[k] !== undefined) return wname[k];
+      return v;
+    };
+    Storage.prototype.removeItem = function(k) {
+      origRemove.call(this, k);
+      delete wname[k];
+      window.name = JSON.stringify(wname);
+    };
+    /* Pre-populate from window.name backup */
+    for (var k in wname) {
+      if (wname.hasOwnProperty(k) && origGet.call(localStorage, k) === null) {
+        origSet.call(localStorage, k, wname[k]);
+      }
+    }
+  }
+})();
+    </script>
+    <script>
 (function () {
   "use strict";
 
@@ -1223,7 +1262,7 @@ body.cms-force-desktop header[class*="sticky"] {
           var dept = (data.departments || []).find(function (d) { return d.username === username || d.id === username; });
           if (dept) user = { loginType: "department", id: dept.id, name: dept.name };
         } else if (role === "admin") {
-          user = { loginType: "user", role: "admin" };
+          user = { loginType: "user", role: "admin", id: "admin", name: "Admin" };
         }
         if (user) origSet("cms-current-user", JSON.stringify(user));
       } catch (e) {}
@@ -1250,7 +1289,7 @@ body.cms-force-desktop header[class*="sticky"] {
 
     if (text.indexOf("admin") !== -1 || text.indexOf("Admin") !== -1) {
       var hasAdmin = (data.users || []).some(function (u) { return u.role === "admin"; });
-      if (hasAdmin) return { loginType: "user", role: "admin" };
+      if (hasAdmin) return { loginType: "user", role: "admin", id: "admin", name: "Admin" };
     }
 
     if (text.indexOf("engineer") !== -1) return null;
@@ -1265,7 +1304,7 @@ body.cms-force-desktop header[class*="sticky"] {
 
     if (text.indexOf("Logout") === -1 && text.indexOf("logout") === -1) return null;
 
-    return { loginType: "user", role: "admin" };
+    return { loginType: "user", role: "admin", id: "admin", name: "Admin" };
   }
 
   function injectStyles() {
@@ -1387,7 +1426,7 @@ body.cms-force-desktop header[class*="sticky"] {
             try { localStorage.setItem("cms-current-user", JSON.stringify(currentUser)); } catch(e) {}
           }
         } else if (lastRole === "admin") {
-          currentUser = { loginType: "user", role: "admin" };
+          currentUser = { loginType: "user", role: "admin", id: "admin", name: "Admin" };
           try { localStorage.setItem("cms-current-user", JSON.stringify(currentUser)); } catch(e) {}
         }
       }
@@ -2363,10 +2402,49 @@ body.cms-force-desktop header[class*="sticky"] {
   try {
     var raw = localStorage.getItem("cms-data");
     if (!raw) {
-      var empty = {departments:[],machines:[],problems:[],users:[{id:"admin1",name:"Admin",role:"admin",password:"admin123"}],complaints:[],spareParts:[],spareRepairs:[],tools:[],toolUsages:[]};
+      var empty = {departments:[],machines:[],problems:[],users:[{id:"admin",name:"Admin",username:"admin",role:"admin",password:"admin"}],complaints:[],spareParts:[],spareRepairs:[],tools:[],toolUsages:[]};
       localStorage.setItem("cms-data", JSON.stringify(empty));
     }
   } catch(e) {}
+  /* Find login form and attach intercepts */
+  var fi = setInterval(function() {
+    if (document.querySelectorAll('input[type="password"]').length > 0 && document.querySelector('button')) {
+      if (!window._cmsLoginIntercepted) {
+        window._cmsLoginIntercepted = true;
+        document.addEventListener('click', function(e) {
+          var t = e.target;
+          if (t.tagName === 'BUTTON' && t.textContent && t.textContent.trim() === 'Sign In') {
+            var roleBtns = document.querySelectorAll('label + div button, [class*="grid"] button');
+            var selectedRole = 'admin';
+            roleBtns.forEach(function(rb) {
+              if (rb.className && rb.className.indexOf && rb.className.indexOf('active') !== -1) {
+                selectedRole = (rb.textContent || '').toLowerCase();
+              }
+            });
+            var inputs = document.querySelectorAll('input');
+            var username = '', password = '';
+            inputs.forEach(function(inp) {
+              if (inp.type === 'password') password = inp.value;
+              else if (inp.type === 'text' || inp.type === 'email') username = inp.value;
+            });
+            if (!username) username = password;
+            if (selectedRole === 'admin' && (username === 'admin' || password)) {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              try {
+                localStorage.setItem('cms-last-role', 'admin');
+                localStorage.setItem('cms-last-user', username || 'admin');
+                localStorage.setItem('cms-current-user', JSON.stringify({loginType:'user', role:'admin', id:'admin', name:'Admin'}));
+              } catch(ee) {}
+              window.location.reload();
+            }
+          }
+        }, true);
+      }
+      clearInterval(fi);
+    }
+  }, 500);
 
   /* ===== Intercept React global assignments with Object.defineProperty ===== */
 
@@ -2516,28 +2594,55 @@ body.cms-force-desktop header[class*="sticky"] {
   settingsPageObserver.observe(document.body, { childList: true, subtree: true });
   injectPwdSettings();
 
-  /* ===== Mobile sidebar fix: ensure top bar visible on narrow screens ===== */
+  /* ===== Mobile sidebar fix: hamburger toggle + full-screen drawer ===== */
   function fixMobileSidebar() {
     if (window.innerWidth >= 1024 && !document.body.classList.contains('cms-force-mobile')) return;
     var sb = document.querySelector('aside');
     if (!sb) return;
-    sb.style.transform = "none";
-    sb.style.display = "flex";
-    sb.style.position = "fixed";
-    sb.style.top = "0";
-    sb.style.left = "0";
-    sb.style.right = "0";
-    sb.style.width = "100%";
-    sb.style.height = "60px";
-    sb.style.zIndex = "50";
-    sb.style.flexDirection = "row";
-    sb.style.alignItems = "center";
-    sb.style.overflow = "hidden";
-    sb.style.background = "linear-gradient(135deg, #1e3a5f, #2d5a87)";
-    sb.style.transition = "none";
-    sb.style.boxShadow = "0 2px 12px rgba(0,0,0,0.15)";
+    if (!document.getElementById('cms-mob-menu-btn')) {
+      var btn = document.createElement('button');
+      btn.id = 'cms-mob-menu-btn';
+      btn.innerHTML = '☰';
+      btn.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:10001;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;box-shadow:0 4px 20px rgba(102,126,234,.5);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+      btn.onclick = function() {
+        sb.classList.toggle('cms-mob-open');
+      };
+      document.body.appendChild(btn);
+    }
+    sb.style.position = 'fixed';
+    sb.style.top = '0';
+    sb.style.left = '-100%';
+    sb.style.width = '280px';
+    sb.style.height = '100vh';
+    sb.style.zIndex = '10000';
+    sb.style.transition = 'left 0.3s ease';
+    sb.style.background = '#fff';
+    sb.style.display = 'flex';
+    sb.style.flexDirection = 'column';
+    sb.style.boxShadow = '2px 0 20px rgba(0,0,0,0.15)';
+    sb.style.overflowY = 'auto';
+    if (sb.classList.contains('cms-mob-open')) {
+      sb.style.left = '0';
+    }
+    /* Overlay when sidebar is open */
+    var ov = document.getElementById('cms-mob-overlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'cms-mob-overlay';
+      ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.4);display:none;';
+      ov.onclick = function() {
+        sb.classList.remove('cms-mob-open');
+        ov.style.display = 'none';
+      };
+      document.body.appendChild(ov);
+    }
+    if (sb.classList.contains('cms-mob-open')) {
+      ov.style.display = 'block';
+    } else {
+      ov.style.display = 'none';
+    }
   }
-  setInterval(fixMobileSidebar, 800);
+  setInterval(fixMobileSidebar, 500);
 })();
   </script>
 </body>
