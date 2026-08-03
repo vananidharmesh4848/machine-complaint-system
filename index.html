@@ -2415,26 +2415,18 @@ body.cms-force-desktop header[class*="sticky"] {
     return cu && cu.loginType === "department";
   }
 
-  /* Load data from Firebase first (cloud backup/sync). If Firebase is empty,
-     fall back to localStorage and upload that data to Firebase. */
+  /* Load data ONLY from Firebase (source of truth). Old localStorage fake data
+     is ignored and will never be re-uploaded, so it can't come back. */
   if (window.cmsFirebase && window.cmsFirebase.load) {
     var _origCmsLoad = window.cmsFirebase.load;
-    var _origCmsSave = window.cmsFirebase.save;
     window.cmsFirebase.load = function(cb, dd) {
-      var localRaw = localStorage.getItem("cms-data");
-      var localData = null;
-      try { localData = localRaw ? JSON.parse(localRaw) : null; } catch(e) {}
-      var hasLocal = localData && (localData.users || []).length > 0;
       _origCmsLoad(function(fb) {
-        var hasFire = fb && (fb.users || []).length > 0;
-        if (hasFire) {
-          cb(fb);
-        } else if (hasLocal) {
-          cb(localData);
-          try { _origCmsSave(localData); } catch(e) {}
-        } else {
-          cb(dd);
+        fb = fb || {};
+        /* Always ensure the admin account exists so login works */
+        if (!fb.users || !fb.users.length) {
+          fb.users = [{id:"admin1",name:"Admin",username:"admin",role:"admin",password:"admin123"}];
         }
+        cb(fb);
       }, dd);
     };
   }
