@@ -2321,6 +2321,12 @@ body.cms-force-desktop header[class*="sticky"] {
         db.ref("cms-data").set(data).catch(function (err) {
           console.error("Firebase save error:", err);
         });
+      },
+      clear: function () {
+        var db = firebase.database();
+        db.ref("cms-data").remove().catch(function (err) {
+          console.error("Firebase clear error:", err);
+        });
       }
     };
   } catch (e) {
@@ -2709,6 +2715,22 @@ body.cms-force-desktop header[class*="sticky"] {
         bar.appendChild(btn);
       });
 
+      /* Clear All Data button (wipes localStorage + Firebase) */
+      var delBtn=document.createElement('button');
+      delBtn.className='cms-mbar-close';
+      delBtn.title='Clear all data';
+      delBtn.innerHTML='<svg width="18"height="18"viewBox="0 0 24 24"fill="none"stroke="rgba(255,255,255,.8)"stroke-width="2"stroke-linecap="round"stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+      delBtn.onclick=function(){
+        if(!confirm('DELETE ALL DATA from Firebase and this device? This cannot be undone.'))return;
+        try{localStorage.removeItem('cms-data');localStorage.removeItem('cms-current-user');localStorage.removeItem('cms-last-role');localStorage.removeItem('cms-last-user');}catch(e){}
+        try{
+          if(window.cmsFirebase&&window.cmsFirebase.clear){window.cmsFirebase.clear();}
+          else if(firebase&&firebase.database){firebase.database().ref('cms-data').remove();}
+        }catch(e){}
+        window.location.reload();
+      };
+      bar.appendChild(delBtn);
+
       /* Refresh button */
       var refBtn=document.createElement('button');
       refBtn.className='cms-mbar-close';
@@ -2731,6 +2753,32 @@ body.cms-force-desktop header[class*="sticky"] {
     var mo=new MutationObserver(injectBar);
     mo.observe(document.body,{childList:true,subtree:true});
     setInterval(injectBar,400);
+
+    /* ===== Desktop "Clear All Data" button (bottom-left) ===== */
+    function injectClearBtn(){
+      if(document.getElementById('cms-clear-fab'))return;
+      var cu=null;
+      try{cu=JSON.parse(localStorage.getItem('cms-current-user')||'null');}catch(e){}
+      if(!cu||cu.role!=='admin')return;
+      var fab=document.createElement('button');
+      fab.id='cms-clear-fab';
+      fab.type='button';
+      fab.textContent='Clear All Data';
+      fab.style.cssText='position:fixed;left:16px;bottom:16px;z-index:99998;background:#dc2626;color:#fff;border:none;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,.35);font-family:sans-serif;';
+      fab.onclick=function(){
+        if(!confirm('DELETE ALL DATA (departments, machines, complaints, engineers, users) from Firebase + this device? This cannot be undone.'))return;
+        try{localStorage.removeItem('cms-data');localStorage.removeItem('cms-current-user');localStorage.removeItem('cms-last-role');localStorage.removeItem('cms-last-user');}catch(e){}
+        try{
+          if(window.cmsFirebase&&window.cmsFirebase.clear){window.cmsFirebase.clear();}
+          else if(window.firebase&&firebase.database){firebase.database().ref('cms-data').remove();}
+        }catch(e){}
+        window.location.reload();
+      };
+      document.body.appendChild(fab);
+    }
+    var cfo=new MutationObserver(injectClearBtn);
+    cfo.observe(document.body,{childList:true,subtree:true});
+    setInterval(injectClearBtn,500);
   })();
 })();
   </script>
