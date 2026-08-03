@@ -2435,6 +2435,10 @@ body.cms-force-desktop header[class*="sticky"] {
         document.addEventListener('submit', function(e) {
           var form = e.target;
           if (!form || form.tagName !== 'FORM') return;
+          /* Only intercept on login page (no logged-in user). This prevents
+             blocking normal data-entry form submissions after login. */
+          if (localStorage.getItem('cms-current-user')) return;
+          if (!form.querySelector('input[type="password"]')) return;
           var inputs = form.querySelectorAll('input');
           var username = '', password = '';
           inputs.forEach(function(inp) {
