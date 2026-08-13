@@ -60,7 +60,7 @@ Error generating stack: `+m.message+`
   }
 },[]),M.useEffect(()=>{
   if (!isLoaded) return;
-  const data = {departments:t,machines:n,problems:i,users:s,complaints:u,spareParts:h,spareRepairs:p,tools:Tl,toolUsages:Tu,itProblems:itPr};
+  const data = JSON.parse(JSON.stringify({departments:t,machines:n,problems:i,users:s,complaints:u,spareParts:h,spareRepairs:p,tools:Tl,toolUsages:Tu,itProblems:itPr}));
   localStorage.setItem("cms-data",JSON.stringify(data));
   if (window.cmsFirebase) {
     window.cmsFirebase.save(data);
@@ -1220,40 +1220,6 @@ body.cms-force-desktop header[class*="sticky"] {
   var STYLE_ID = "gt10-style";
   var BTN_ID = "gt10-fab";
   var MODAL_ID = "gt10-modal";
-
-  function loginIntercept() {
-    var origSet = localStorage.setItem.bind(localStorage);
-    var origRemove = localStorage.removeItem.bind(localStorage);
-    var origGet = localStorage.getItem.bind(localStorage);
-
-    function saveUser(role, username) {
-      try {
-        var raw = origGet("cms-data");
-        if (!raw || !role || !username) return;
-        var data = JSON.parse(raw);
-        var user;
-        if (role === "department") {
-          var dept = (data.departments || []).find(function (d) { return d.username === username || d.id === username; });
-          if (dept) user = { loginType: "department", id: dept.id, name: dept.name };
-        } else if (role === "admin") {
-          var du = (data.users || []).find(function(x) { return x.role === "admin"; }) || {};
-          user = { loginType: "user", role: "admin", id: du.id || "admin", name: du.name || "Admin" };
-        }
-        if (user) origSet("cms-current-user", JSON.stringify(user));
-      } catch (e) {}
-    }
-
-    localStorage.setItem = function (key, value) {
-      origSet(key, value);
-      if (key === "cms-last-user") saveUser(origGet("cms-last-role"), value);
-    };
-
-    localStorage.removeItem = function (key) {
-      if (key === "cms-last-role") origRemove("cms-current-user");
-      origRemove(key);
-    };
-  }
-  loginIntercept();
 
   function detectUser(data) {
     var sidebar = document.querySelector('[class*="aside"]');
