@@ -803,6 +803,11 @@ main {
     display: none !important;
   }
 }
+@media (max-width: 1023px) {
+  #cms-mobile-toggle {
+    display: none !important;
+  }
+}
 
 @media (max-width: 1023px) {
   /* Sidebar becomes a fixed horizontal bar pinned to the top */
@@ -934,6 +939,27 @@ main {
   }
 }
 
+/* ---- Mobile tables & overflow (all screens < 1024px) ---- */
+@media (max-width: 1023px) {
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  div[class*="overflow-x-auto"] table {
+    display: table !important;
+    min-width: 600px !important;
+  }
+  header.sticky {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  header.sticky h2,
+  header.sticky h3 {
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+  }
+}
 /* ---- Extra small screens (< 640px) ---- */
 @media (max-width: 640px) {
   /* Cards stack 1 column */
@@ -2511,99 +2537,7 @@ body.cms-force-desktop header[class*="sticky"] {
   settingsPageObserver.observe(document.body, { childList: true, subtree: true });
   injectPwdSettings();
 
-  /* ===== Mobile: inject independent top bar (works regardless of React) ===== */
-  (function(){
-    /* Inject CSS for our custom top bar + hide React sidebar on mobile */
-    var s=document.createElement('style');
-    s.id='cms-mobile-css';
-    s.textContent='@media(max-width:1023px){'+
-      'aside{'+
-        'display:none!important;'+
-      '}'+
-      '#cms-mbar{'+
-        'position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:99999!important;'+
-        'height:56px!important;background:linear-gradient(135deg,#1e3a5f,#2d5a87)!important;'+
-        'box-shadow:0 2px 12px rgba(0,0,0,.15)!important;'+
-        'display:flex!important;align-items:center!important;padding:0 4px!important;'+
-        'gap:3px!important;overflow-x:auto!important;overflow-y:hidden!important;'+
-        'border:none!important;'+
-      '}'+
-      '#cms-mbar button{'+
-        'flex:0 0 auto!important;'+
-        'display:inline-flex!important;align-items:center!important;gap:3px!important;'+
-        'padding:6px 10px!important;white-space:nowrap!important;'+
-        'color:rgba(255,255,255,.9)!important;background:rgba(255,255,255,.1)!important;'+
-        'border-radius:6px!important;border:none!important;'+
-        'font-size:12px!important;cursor:pointer!important;line-height:1.3!important;'+
-        'height:38px!important;margin:0!important;'+
-      '}'+
-      '#cms-mbar button.cms-mbar-close{'+
-        'width:36px!important;height:36px!important;padding:4px!important;font-size:0!important;'+
-        'border-radius:8px!important;justify-content:center!important;'+
-      '}'+
-      'main{'+
-        'margin-top:56px!important;'+
-      '}'+
-    '}';
-    document.head.appendChild(s);
-
-    function injectBar(){
-      if(window.innerWidth>=1024)return;
-      if(document.getElementById('cms-mbar'))return;
-      var aside=document.querySelector('aside');
-      if(!aside)return;
-
-      /* Read React's button labels from the sidebar */
-      var allBtns=aside.querySelectorAll('button');
-      var navBtns=[], logBtns=[], seen={};
-      allBtns.forEach(function(b){
-        var txt=(b.textContent||'').trim().toLowerCase();
-        if(!txt)return;
-        if(txt.indexOf('logout')!==-1){logBtns.push(b);return;}
-        /* Avoid duplicates */
-        var key=txt.replace(/[^a-z]/g,'');
-        if(!seen[key]){seen[key]=1;navBtns.push(b);}
-      });
-
-      /* If no nav buttons found, bail */
-      if(!navBtns.length&&!logBtns.length)return;
-
-      var bar=document.createElement('div');
-      bar.id='cms-mbar';
-
-      /* Create a button for each React nav button */
-      navBtns.forEach(function(rb){
-        var label=(rb.textContent||'').trim().replace(/[0-9]/g,'').trim() || '?';
-        var btn=document.createElement('button');
-        btn.textContent=label;
-        btn.onclick=function(){rb.click();};
-        bar.appendChild(btn);
-      });
-
-      /* Refresh button */
-      var refBtn=document.createElement('button');
-      refBtn.className='cms-mbar-close';
-      refBtn.innerHTML='<svg width="18"height="18"viewBox="0 0 24 24"fill="none"stroke="rgba(255,255,255,.8)"stroke-width="2"stroke-linecap="round"stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
-      refBtn.onclick=function(){window.location.reload();};
-      bar.appendChild(refBtn);
-
-      /* Compact logout button */
-      if(logBtns.length){
-        var lob=document.createElement('button');
-        lob.className='cms-mbar-close';
-        lob.innerHTML='<svg width="18"height="18"viewBox="0 0 24 24"fill="none"stroke="rgba(255,255,255,.8)"stroke-width="2"stroke-linecap="round"stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21"y1="12"x2="9"y2="12"/></svg>';
-        lob.onclick=function(){logBtns.forEach(function(lb){lb.click();});};
-        bar.appendChild(lob);
-      }
-
-      document.body.insertBefore(bar,document.body.firstChild);
-    }
-
-    var mo=new MutationObserver(injectBar);
-    mo.observe(document.body,{childList:true,subtree:true});
-    setInterval(injectBar,400);
-  })();
-})();
+  /* (cms-mbar removed - CSS sidebar transform handles mobile nav) */
   </script>
 <script>
   /* PC / Mobile login-view toggle - shown ONLY at the top of the login
@@ -2709,3 +2643,4 @@ body.cms-force-desktop header[class*="sticky"] {
   </script>
 </body>
 </html>
+
